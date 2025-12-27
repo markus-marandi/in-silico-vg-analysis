@@ -1,0 +1,7 @@
+experiments_data/dataset3_ClinGen/dataset3_clingen_variant_level_summary.parquet filter=lfs diff=lfs merge=lfs -text
+experiments_data/dataset3_ClinGen/dataset3_clingen_gene_level_summary.csv filter=lfs diff=lfs merge=lfs -text
+experiments_data/dataset4_background/dataset4_background_gene_level_summary.csv filter=lfs diff=lfs merge=lfs -text
+experiments_data/dataset5_NULL/dataset5_background_NULL_gene_level_summary.csv filter=lfs diff=lfs merge=lfs -text
+experiments_data/dataset5_NULL/dataset5_Background_NULL_variant_level_summary.parquet filter=lfs diff=lfs merge=lfs -text
+experiments_data/dataset5_NULL/dataset5_Clingen_NULL_gene_level_summary.csv filter=lfs diff=lfs merge=lfs -text
+experiments_data/dataset5_NULL/dataset5_ClinGen_NULL_variant_level_summary.parquet filter=lfs diff=lfs merge=lfs -text
