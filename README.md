@@ -11,7 +11,7 @@ in-silico-vg-analysis/
 ├── config.py              # the 'golden link': central paths to the pipeline repo
 ├── 01_qc/                 # technical validation: distributions, nulls, and coverage
 ├── 02_benchmarking/       # validation: predicted vg vs ground truth (aneva-dot/gtex)
-├── 03_visualization/      # spatial analysis: tss decay, promoter vs body binning
+├── 03_visualisation/      # spatial analysis: tss decay, promoter vs body binning
 ├── 04_case_studies/       # deep dives: high-impact gene candidates
 ├── figures/               # high-resolution exports for thesis/publication
 └── dashboard.py           # interactive streamlit dashboard for global exploration
