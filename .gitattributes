@@ -5,3 +5,6 @@ experiments_data/dataset5_NULL/dataset5_background_NULL_gene_level_summary.csv f
 experiments_data/dataset5_NULL/dataset5_Background_NULL_variant_level_summary.parquet filter=lfs diff=lfs merge=lfs -text
 experiments_data/dataset5_NULL/dataset5_Clingen_NULL_gene_level_summary.csv filter=lfs diff=lfs merge=lfs -text
 experiments_data/dataset5_NULL/dataset5_ClinGen_NULL_variant_level_summary.parquet filter=lfs diff=lfs merge=lfs -text
+experiments_data/dataset3_ClinGen/clingen_alphagenome_scores_all_aggs_variantids_long.backfilled_genes.parquet filter=lfs diff=lfs merge=lfs -text
+experiments_data/dataset5_NULL/dataset5_Background_NULL_gene_level_summary.parquet filter=lfs diff=lfs merge=lfs -text
+experiments_data/dataset5_NULL/dataset5_ClinGen_NULL_gene_level_summary.csv filter=lfs diff=lfs merge=lfs -text

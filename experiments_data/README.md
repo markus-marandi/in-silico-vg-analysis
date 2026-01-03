@@ -19,7 +19,7 @@ experiments_data/
 
 ```
 
-## 🧪 The "Matched NULL" Sets
+## The "Matched NULL" Sets
 
 Dataset 5 (NULL) represents a "matched null" control set. For each gene (TSS ±10kb), we constructed a synthetic variant set that mirrors the mutational opportunities of the observed variants.
 
