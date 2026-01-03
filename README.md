@@ -26,7 +26,7 @@ to maintain synchronization with the pipeline outputs on the hpc cluster, all no
 from pathlib import Path
 
 # central hub for cluster paths
-BASE_DIR = Path('/cfs/klemming/scratch/m/mmarandi/experiments/dataset4/background')
+BASE_DIR = Path('/cfs/klemming/scratch/m/mmarandi/experiments/')
 RESULTS_DIR = BASE_DIR / '03_results'
 INPUTS_DIR = BASE_DIR / '01_inputs'
 
