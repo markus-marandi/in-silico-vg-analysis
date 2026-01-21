@@ -1,92 +1,76 @@
+import sys
 from pathlib import Path
+from typing import Optional, List, Tuple
 
 import polars as pl
+from rich.console import Console
+from rich.table import Table
+from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, TaskProgressColumn
 
-# central hub for local project paths
+# Initialize Rich console for beautiful logging
+console = Console()
+
+# --- Path Resolution ---
 PROJECT_ROOT = Path(__file__).resolve().parent
 EXPERIMENTS_DATA = PROJECT_ROOT / 'experiments_data'
 
-# import preprocessing utilities
+# Import local utilities
 from config_helpers import dedup_scores_by_variant, downsample_null_to_real
 
-
 def _latest_matching(pattern: str) -> Path:
-    """return newest match inside experiments data."""
+    """Return newest match inside experiments data."""
     matches = sorted(EXPERIMENTS_DATA.glob(pattern))
     if not matches:
-        raise FileNotFoundError(f'no files match pattern: {pattern}')
+        raise FileNotFoundError(f"No files match pattern: {pattern}")
     return matches[-1]
 
-
-CLINGEN_VAR_PATH = _latest_matching('dataset3_ClinGen/*variant_level_summary.parquet')
-BACKGROUND_VAR_PATH = _latest_matching('dataset4_background/background_variants_20260119.parquet')
-BACKGROUND_NULL_VAR_PATH = _latest_matching(
-    'dataset5_NULL/*Background_NULL_variant_level_summary_1901.parquet'
-)
-CLINGEN_NULL_VAR_PATH = _latest_matching(
-    'dataset5_NULL/*ClinGen_NULL_variant_level_summary_1901.parquet'
-)
-
+# --- Dataset Registries ---
 VARIANT_PATHS = {
-    'background': BACKGROUND_VAR_PATH,
-    'background_null': BACKGROUND_NULL_VAR_PATH,
-    'clingen': CLINGEN_VAR_PATH,
-    'clingen_null': CLINGEN_NULL_VAR_PATH,
+    'background': _latest_matching('dataset4_background/background_variants_20260119.parquet'),
+    'background_null': _latest_matching('dataset5_NULL/*Background_NULL_variant_level_summary_1901.parquet'),
+    'clingen': _latest_matching('dataset3_ClinGen/*variant_level_summary.parquet'),
+    'clingen_null': _latest_matching('dataset5_NULL/*ClinGen_NULL_variant_level_summary_1901.parquet'),
 }
-
-CLINGEN_GENE_PATH = _latest_matching('dataset3_ClinGen/clingen_genes_20260102.parquet')
-BACKGROUND_GENE_PATH = _latest_matching('dataset4_background/background_genes_20260102.parquet')
-BACKGROUND_NULL_GENE_PATH = _latest_matching(
-    'dataset5_NULL/dataset5_Background_NULL_gene_level_summary_1901.parquet'
-)
-CLINGEN_NULL_GENE_PATH = _latest_matching(
-    'dataset5_NULL/dataset5_ClinGen_NULL_gene_level_summary_1901.parquet'
-)
 
 GENE_PATHS = {
-    'background': BACKGROUND_GENE_PATH,
-    'background_null': BACKGROUND_NULL_GENE_PATH,
-    'clingen': CLINGEN_GENE_PATH,
-    'clingen_null': CLINGEN_NULL_GENE_PATH,
+    'background': _latest_matching('dataset4_background/background_genes_20260102.parquet'),
+    'background_null': _latest_matching('dataset5_NULL/dataset5_Background_NULL_gene_level_summary_1901.parquet'),
+    'clingen': _latest_matching('dataset3_ClinGen/clingen_genes_20260102.parquet'),
+    'clingen_null': _latest_matching('dataset5_NULL/dataset5_ClinGen_NULL_gene_level_summary_1901.parquet'),
 }
 
-# standard palette for dataset sources
 SOURCE_PALETTE = {
-    'background': '#4F46E5',       # Indigo (Vibrant Blue)
-    'background_null': '#1e1b4b',  # Midnight (Deep Navy)
-    'clingen': '#10B981',          # Emerald (Vibrant Green)
-    'clingen_null': '#064E3B',     # Jungle (Deep Green)
+    'background': '#4F46E5', 'background_null': '#1e1b4b',
+    'clingen': '#10B981', 'clingen_null': '#064E3B',
 }
 
+# --- Core Loading Functions ---
 
 def load_variants_processed(
     dataset_name: str,
-    af_column: str | None = None,
     verbose: bool = True,
+    columns: Optional[List[str]] = None,
 ) -> pl.DataFrame:
-    """load and deduplicate variant data.
-    
-    args:
-        dataset_name (str): one of 'background', 'background_null', 'clingen', 'clingen_null'.
-        af_column (str | None): af column to keep ('AF' for real, 'perm_AF' for null, None for none).
-        verbose (bool): print loading stats.
-    
-    returns:
-        pl.DataFrame: deduplicated variants with gene_id, variant_id, raw_score, and af column if specified.
-    """
+    """Load and deduplicate variant data, preserving schema flexibility."""
     if dataset_name not in VARIANT_PATHS:
-        raise ValueError(f'unknown dataset: {dataset_name}. choose from {list(VARIANT_PATHS.keys())}')
+        raise ValueError(f"Unknown dataset: {dataset_name}")
     
     path = VARIANT_PATHS[dataset_name]
-    columns = [af_column] if af_column else None
     
-    return dedup_scores_by_variant(
+    # Use our updated dedup function that preserves all columns
+    df = dedup_scores_by_variant(
         path=path,
         label=dataset_name if verbose else None,
-        columns=columns,
-        verbose=verbose,
+        verbose=False # We handle our own logging here
     )
-
+    
+    if columns:
+        # Ensure core columns are always present
+        base = ['variant_id', 'gene_id', 'raw_score']
+        target_cols = [c for c in (base + columns) if c in df.columns]
+        df = df.select(target_cols)
+    
+    return df
 
 def load_variant_pairs_matched(
     real_dataset: str,
@@ -94,59 +78,64 @@ def load_variant_pairs_matched(
     downsample: bool = True,
     seed: int = 42,
     verbose: bool = True,
-) -> tuple[pl.DataFrame, pl.DataFrame]:
-    """load and process matching real and null variant pairs.
+) -> Tuple[pl.DataFrame, pl.DataFrame]:
+    """Load matching pairs with a visual progress bar and summary table."""
     
-    args:
-        real_dataset (str): real dataset name ('background' or 'clingen').
-        null_dataset (str): null dataset name ('background_null' or 'clingen_null').
-        downsample (bool): downsample null to match real counts per gene.
-        seed (int): random seed for downsampling.
-        verbose (bool): print processing stats.
-    
-    returns:
-        tuple[pl.DataFrame, pl.DataFrame]: (real_dedup, null_sampled) dataframes.
-    """
-    # infer af columns
-    real_af_col = 'AF'
-    null_af_col = 'perm_AF'
-    
-    # load and deduplicate real variants
+    with Progress(
+        SpinnerColumn(),
+        TextColumn("[progress.description]{task.description}"),
+        BarColumn(),
+        TaskProgressColumn(),
+        console=console,
+        transient=True
+    ) as progress:
+        
+        # 1. Load Real Dataset
+        task1 = progress.add_task(f"[bold blue]Loading {real_dataset}...", total=100)
+        real_df = load_variants_processed(real_dataset, verbose=False)
+        progress.update(task1, completed=100)
+
+        # 2. Load Null Dataset
+        task2 = progress.add_task(f"[bold magenta]Loading {null_dataset}...", total=100)
+        null_df = load_variants_processed(null_dataset, verbose=False)
+        progress.update(task2, completed=100)
+
+        # 3. Downsampling
+        if downsample:
+            task3 = progress.add_task("[bold yellow]Downsampling null set...", total=100)
+            gene_key = real_dataset.replace('_null', '')
+            real_gene_counts = pl.read_parquet(GENE_PATHS[gene_key])
+            
+            null_final = downsample_null_to_real(
+                null_df=null_df,
+                real_counts_df=real_gene_counts,
+                seed=seed
+            )
+            progress.update(task3, completed=100)
+        else:
+            null_final = null_df
+
     if verbose:
-        print(f'loading {real_dataset}...')
-    real_dedup = load_variants_processed(
-        dataset_name=real_dataset,
-        af_column=real_af_col,
-        verbose=verbose,
-    )
+        _print_matching_summary(real_dataset, real_df, null_dataset, null_final)
+
+    return real_df, null_final
+
+# --- Reporting Utilities ---
+
+def _print_matching_summary(real_name: str, real_df: pl.DataFrame, null_name: str, null_df: pl.DataFrame):
+    """Prints a clean summary table of the loaded pair."""
+    table = Table(title="[bold]Dataset Matching Summary", title_justify="left", border_style="bright_black")
     
-    # load and deduplicate null variants
-    if verbose:
-        print(f'loading {null_dataset}...')
-    null_dedup = load_variants_processed(
-        dataset_name=null_dataset,
-        af_column=null_af_col,
-        verbose=verbose,
-    )
+    table.add_column("Metric", style="cyan")
+    table.add_column(real_name.capitalize(), style=SOURCE_PALETTE.get(real_name, "white"))
+    table.add_column(null_name.capitalize(), style=SOURCE_PALETTE.get(null_name, "white"))
+
+    table.add_row("Total Variants", f"{real_df.height:,}", f"{null_df.height:,}")
+    table.add_row("Unique Genes", f"{real_df['gene_id'].n_unique():,}", f"{null_df['gene_id'].n_unique():,}")
     
-    # downsample null to match real if requested
-    if downsample:
-        if verbose:
-            print(f'downsampling {null_dataset} to match {real_dataset} counts...')
-        
-        # load gene counts
-        gene_key = real_dataset.replace('_null', '')
-        real_gene = pl.read_parquet(GENE_PATHS[gene_key])
-        
-        null_sampled = downsample_null_to_real(
-            null_df=null_dedup,
-            real_counts_df=real_gene,
-            seed=seed,
-        )
-        
-        if verbose:
-            print(f'  {null_dataset} after downsampling: {null_sampled.shape}')
-        
-        return real_dedup, null_sampled
-    else:
-        return real_dedup, null_dedup
+    # Calculate overlap
+    common_genes = len(set(real_df['gene_id'].unique()) & set(null_df['gene_id'].unique()))
+    table.add_row("Gene Overlap", f"{common_genes:,}", f"{common_genes:,}")
+    
+    console.print(table)
+    console.print(f"[dim]Columns available: {', '.join(real_df.columns[:5])}... ({len(real_df.columns)} total)[/]\n")
