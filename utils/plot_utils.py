@@ -72,7 +72,7 @@ def save_plot(fig: plt.Figure = None,
     # Path handling
     outdir = Path(outdir) if outdir else DEFAULT_OUTDIR
     outdir.mkdir(parents=True, exist_ok=True)
-
+    
     formats = formats or DEFAULT_FORMATS
     rasterize_threshold = rasterize_threshold or RASTERIZE_POINTCOUNT_THRESHOLD
 
@@ -88,22 +88,23 @@ def save_plot(fig: plt.Figure = None,
     basename = _make_basename(notebook_name, title, ts)
 
     # Handle heavy data points (Vector-Raster Hybrid)
-    # This keeps the axes/labels as vectors but turns massive scatter plots into pixels
     if ax is not None and rasterize_threshold:
         for artist in list(ax.collections) + list(ax.lines):
             if hasattr(artist, "get_offsets"):
-                npts = len(artist.get_offsets())
-                if npts >= rasterize_threshold:
-                    artist.set_rasterized(True)
-                    if verbose:
-                        print(f"[save_plot] Rasterizing {npts} points for {fmt.upper()} performance.")
+                try:
+                    npts = len(artist.get_offsets())
+                    if npts >= rasterize_threshold:
+                        artist.set_rasterized(True)
+                        if verbose:
+                            # FIXED: Removed {fmt} reference here
+                            print(f"[save_plot] Rasterizing {npts} points to optimize vector export.")
+                except Exception:
+                    continue
 
     if force_rasterize_artists:
         for a in force_rasterize_artists:
-            try:
-                a.set_rasterized(True)
-            except:
-                pass
+            try: a.set_rasterized(True)
+            except: pass
 
     saved_paths = []
     for fmt in formats:
@@ -111,13 +112,13 @@ def save_plot(fig: plt.Figure = None,
         try:
             # Affinity Designer prefers PDF for layered vector imports
             save_kwargs = {"bbox_inches": "tight", "transparent": True}
-
+            
             if fmt.lower() in ("png", "jpg", "tiff"):
                 save_kwargs["dpi"] = PNG_DPI
-
+            
             fig.savefig(fname, format=fmt, **save_kwargs)
             saved_paths.append(str(fname))
-
+            
             if verbose:
                 print(f"[save_plot] Saved: {fname.name}")
         except Exception as e:

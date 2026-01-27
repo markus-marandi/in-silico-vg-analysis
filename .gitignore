@@ -10,3 +10,7 @@ __pycache__/
 /experiments_data/dataset5_NULL/old_files/*
 /experiments_data/dataset4_background/old_files/*
 /experiments_data/dataset3_ClinGen/old_files/*
+/experiments_data/dataset5_NULL/old_files/*
+/experiments_data/dataset4_background/old_files/*
+/experiments_data/dataset3_ClinGen/old_files/*
+/figures/*
