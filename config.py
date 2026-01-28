@@ -22,18 +22,18 @@ def _latest_matching(pattern: str) -> Path:
 
 
 VARIANT_PATHS = {
-    'background': _latest_matching('dataset4_background/Background_Gnomad_variants_dedup_perm_26012026.parquet'),
-    'background_null': _latest_matching('dataset5_NULL/Background_Synth_variants_downsampled_perm_26012026.parquet'),
-    'clingen': _latest_matching('dataset3_ClinGen/ClinGen_HI_Gnomad_variants_dedup_26012026.parquet'),
-    'clingen_null': _latest_matching('dataset5_NULL/ClinGen_HI_Synth_variants_downsampled_perm_26012026.parquet'),
+    'background': _latest_matching('dataset4_background/Background_Gnomad_variants_dedup_perm_27012026.parquet'),
+    'background_null': _latest_matching('dataset5_NULL/Background_Synth_variants_downsampled_perm_27012026.parquet'),
+    'clingen': _latest_matching('dataset3_ClinGen/ClinGen_HI_Gnomad_variants_dedup_27012026.parquet'),
+    'clingen_null': _latest_matching('dataset5_NULL/ClinGen_HI_Synth_variants_downsampled_perm_27012026.parquet'),
 }
 
 # Kept as requested
 GENE_PATHS = {
-    'background': _latest_matching('dataset4_background/Background_Gnomad_genes_26012026.parquet'),
-    'background_null': _latest_matching('dataset5_NULL/Background_Synth_genes_26012026.parquet'),
-    'clingen': _latest_matching('dataset3_ClinGen/ClinGen_HI_Gnomad_genes_26012026.parquet'),
-    'clingen_null': _latest_matching('dataset5_NULL/ClinGen_HI_Synth_genes_26012026.parquet'),
+    'background': _latest_matching('dataset4_background/Background_Gnomad_genes_27012026.parquet'),
+    'background_null': _latest_matching('dataset5_NULL/Background_Synth_genes_27012026.parquet'),
+    'clingen': _latest_matching('dataset3_ClinGen/ClinGen_HI_Gnomad_genes_27012026.parquet'),
+    'clingen_null': _latest_matching('dataset5_NULL/ClinGen_HI_Synth_genes_27012026.parquet'),
 }
 
 SOURCE_PALETTE = {
