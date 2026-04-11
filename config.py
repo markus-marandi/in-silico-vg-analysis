@@ -22,42 +22,76 @@ def _latest_matching(pattern: str) -> Path:
 
 
 VARIANT_PATHS = {
-    'background': _latest_matching('dataset4_background/Background_Gnomad_variants_dedup_perm_27012026.parquet'),
-    'background_null': _latest_matching('dataset5_NULL/Background_Synth_variants_downsampled_perm_27012026.parquet'),
-    'clingen': _latest_matching('dataset3_ClinGen/ClinGen_HI_Gnomad_variants_dedup_27012026.parquet'),
-    'clingen_null': _latest_matching('dataset5_NULL/ClinGen_HI_Synth_variants_downsampled_perm_27012026.parquet'),
+    'background': _latest_matching('dataset4_background/Background_Gnomad_variants_dedup_perm_21022026.parquet'),
+    'background_null': _latest_matching('dataset5_NULL/Background_Synth_variants_downsampled_perm_21022026.parquet'),
+    'clingen': _latest_matching('dataset3_ClinGen/ClinGen_HI_Gnomad_variants_dedup_21022026.parquet'),
+    'clingen_null': _latest_matching('dataset5_NULL/ClinGen_HI_Synth_variants_downsampled_perm_21022026.parquet'),
 }
 
-# Kept as requested
 GENE_PATHS = {
-    'background': _latest_matching('dataset4_background/Background_Gnomad_genes_27012026.parquet'),
-    'background_null': _latest_matching('dataset5_NULL/Background_Synth_genes_27012026.parquet'),
-    'clingen': _latest_matching('dataset3_ClinGen/ClinGen_HI_Gnomad_genes_27012026.parquet'),
-    'clingen_null': _latest_matching('dataset5_NULL/ClinGen_HI_Synth_genes_27012026.parquet'),
+    'background': _latest_matching('dataset4_background/Background_Gnomad_genes_21022026.parquet'),
+    'background_null': _latest_matching('dataset5_NULL/Background_Synth_genes_21022026.parquet'),
+    'clingen': _latest_matching('dataset3_ClinGen/ClinGen_HI_Gnomad_genes_21022026.parquet'),
+    'clingen_null': _latest_matching('dataset5_NULL/ClinGen_HI_Synth_genes_21022026.parquet'),
 }
+
+# ── Display / plotting config ──────────────────────────────────────────────────
+# Vg spans multiple orders of magnitude; log scale is the canonical display mode.
+# Toggle VG_LOG_SCALE = False to revert to linear in any notebook.
+VG_LOG_SCALE: bool = True
+# Floor value clipped before log-transform to avoid log(0) / -Inf artefacts.
+VG_MIN_CLIP: float = 1e-12
 
 SOURCE_PALETTE = {
     'background': '#4F46E5', 'background_null': '#1e1b4b',
     'clingen': '#10B981', 'clingen_null': '#064E3B',
 }
 
+DISPLAY_NAMES = {
+    'background': 'Background',
+    'background_null': 'Background\n(Synthetic)',
+    'clingen': 'ClinGen HI',
+    'clingen_null': 'ClinGen HI\n(Synthetic)',
+}
+
+# Simplified display names for tight plots
+DISPLAY_NAMES_SHORT = {
+    'background': 'Bg',
+    'background_null': 'Bg-Synth',
+    'clingen': 'HI',
+    'clingen_null': 'HI-Synth',
+}
+
+
+
+POLYA_ASSAY_TITLE = 'polyA plus RNA-seq'
 
 
 def load_variants_processed(
         dataset_name: str,
         columns: Optional[List[str]] = None,
+        filter_polya: bool = True,
 ) -> pl.DataFrame:
-    """Load variant data directly from parquet."""
+    """Load variant data directly from parquet.
+
+    args:
+        dataset_name (str): key into VARIANT_PATHS
+        columns (list[str] | None): subset of columns to return; core columns always included
+        filter_polya (bool): when true, restrict to rows where 'Assay title' == POLYA_ASSAY_TITLE
+
+    returns:
+        pl.DataFrame: filtered variant dataframe
+    """
     if dataset_name not in VARIANT_PATHS:
         raise ValueError(f"Unknown dataset: {dataset_name}")
 
     path = VARIANT_PATHS[dataset_name]
-
-    # Direct read, no deduplication logic
     df = pl.read_parquet(path)
 
+    if filter_polya and 'Assay title' in df.columns:
+        df = df.filter(pl.col('Assay title') == POLYA_ASSAY_TITLE)
+
     if columns:
-        # Ensure core columns are always present
         base = ['variant_id', 'gene_id', 'raw_score']
         target_cols = [c for c in (base + columns) if c in df.columns]
         df = df.select(target_cols)
@@ -69,9 +103,19 @@ def load_variant_pairs_matched(
         real_dataset: str,
         null_dataset: str,
         verbose: bool = True,
+        filter_polya: bool = True,
 ) -> Tuple[pl.DataFrame, pl.DataFrame]:
-    """Load matching pairs with a visual progress bar and summary table."""
+    """Load matching real/null variant pairs with a progress bar and summary table.
 
+    args:
+        real_dataset (str): key for the real dataset in VARIANT_PATHS
+        null_dataset (str): key for the null dataset in VARIANT_PATHS
+        verbose (bool): print summary table after loading
+        filter_polya (bool): passed through to load_variants_processed
+
+    returns:
+        tuple[pl.DataFrame, pl.DataFrame]: (real_df, null_df)
+    """
     with Progress(
             SpinnerColumn(),
             TextColumn("[progress.description]{task.description}"),
@@ -80,14 +124,12 @@ def load_variant_pairs_matched(
             console=console,
             transient=True
     ) as progress:
-        # 1. Load Real Dataset
         task1 = progress.add_task(f"[bold blue]Loading {real_dataset}...", total=100)
-        real_df = load_variants_processed(real_dataset)
+        real_df = load_variants_processed(real_dataset, filter_polya=filter_polya)
         progress.update(task1, completed=100)
 
-        # 2. Load Null Dataset
         task2 = progress.add_task(f"[bold magenta]Loading {null_dataset}...", total=100)
-        null_df = load_variants_processed(null_dataset)
+        null_df = load_variants_processed(null_dataset, filter_polya=filter_polya)
         progress.update(task2, completed=100)
 
     if verbose:
