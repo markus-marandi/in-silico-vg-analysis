@@ -44,7 +44,7 @@ def _detect_notebook_name():
             return Path(__main__.__file__).stem
     except Exception:
         pass
-    return "interactive"
+    return "figuree"
 
 
 def _make_basename(notebook_name: str, title: str, ts: str):
@@ -53,7 +53,6 @@ def _make_basename(notebook_name: str, title: str, ts: str):
     return f"{nb}_{ttl}_{ts}"
 
 
-# ---- Main Save Function ----
 def save_plot(fig: plt.Figure = None,
               ax: plt.Axes = None,
               title: str = None,
@@ -96,7 +95,6 @@ def save_plot(fig: plt.Figure = None,
                     if npts >= rasterize_threshold:
                         artist.set_rasterized(True)
                         if verbose:
-                            # FIXED: Removed {fmt} reference here
                             print(f"[save_plot] Rasterizing {npts} points to optimize vector export.")
                 except Exception:
                     continue
