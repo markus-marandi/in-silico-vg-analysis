@@ -7,6 +7,12 @@
 .env.test.local
 .env.production.local
 __pycache__/
+.ipynb_checkpoints/
+.ipython/
+.jupyter/
+.matplotlib/
+.claude/worktrees/
+10_THESIS/.claude/worktrees/
 /experiments_data/dataset5_NULL/old_files/*
 /experiments_data/dataset4_background/old_files/*
 /experiments_data/dataset3_ClinGen/old_files/*
@@ -14,3 +20,16 @@ __pycache__/
 /experiments_data/dataset4_background/old_files/*
 /experiments_data/dataset3_ClinGen/old_files/*
 /figures/*
+
+# Generated thesis and exploratory outputs. Curated public figures live in docs/figures/.
+10_THESIS/FIGURES_FOR_THESIS/
+09_3103_biweekly/eqtl_susie_alpha_genome_outputs/
+09_3103_biweekly/*.parquet
+09_3103_biweekly/*.tsv
+09_3103_biweekly/*.tsv.gz
+experiments_data/**/*.parquet
+results/compare_vg_predicted_*
+
+!docs/
+!docs/figures/
+!docs/figures/**
