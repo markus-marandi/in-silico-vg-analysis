@@ -1,0 +1,16 @@
+cff-version: 1.2.0
+message: "If you use this repository, please cite it and the associated thesis."
+title: "In-Silico VG Analysis"
+authors:
+  - family-names: "Marandi"
+    given-names: "Markus"
+year: 2026
+repository-code: "https://github.com/markus-marandi/in-silico-vg-analysis"
+type: software
+abstract: "Downstream analysis notebooks and figures for estimating gene-level predicted cis-regulatory genetic variance from AlphaGenome variant-effect predictions."
+keywords:
+  - AlphaGenome
+  - regulatory variation
+  - genetic variance
+  - haploinsufficiency
+  - eQTL
